@@ -1,0 +1,89 @@
+#include "cstdlib"
+#include "iostream"
+#include "TFile.h"
+#include "cstring"
+#include "TLegend.h"
+#include "TGraph.h"
+//#include "TROOT.h"
+#include "TH3.h"
+#include "TH2.h"
+#include "TH1.h"
+#include "TCanvas.h"
+#include "TStyle.h"
+#include "TMath.h"
+#include "TText.h"
+#include "TPaveText.h"
+#include "TGraphErrors.h"
+#include "TMultiGraph.h"
+#include "TAttFill.h"
+#include "TColor.h"
+#include "string"
+
+using namespace std;
+
+int countLines(char *filelist);
+ifstream& goToLine(ifstream& file, unsigned int num);
+
+
+void drawSpectrum()
+{
+  
+  ifstream input;
+  input.open("HEPData-ins1127497-v1-Table_10.txt");
+  int nLines = countLines("HEPData-ins1127497-v1-Table_10.txt") - 1;
+  const int nPoints = nLines - 14;
+  cout << "nPoints: " << nPoints << endl;
+  float x[nPoints];
+  float y[nPoints];
+  float err_x[nPoints];
+  float err_y[nPoints];
+
+  gStyle -> SetOptStat(1110);
+
+  for(int i = 0; i < nLines-14; i++)
+    {
+      goToLine(input, i+14);
+      string sx,sy,serr_x,serr_y,a,b;
+      input >> sx >> a >> b >> sy >> serr_y;
+      //cout << "sx: " << sx << "b: " << b << "a: " << a << "sy: " << sy << "serr_y: " << serr_y << endl;
+      x[i] = stof(sx);
+      err_x[i] = stof(b)-stof(a);
+      y[i] = stof(sy);
+      err_y[i] = stof(serr_y);
+      
+      //cout << "x: " << x[i] << " ; y: " << y[i] << " ; err_x: " << err_x[i] << " ; err_y: " << err_y[i] <<endl;   
+    }
+
+
+  TGraphErrors *variance = new TGraphErrors(nPoints,x,y,err_x,err_y);
+  TCanvas *c1 = new TCanvas();
+  c1 -> SetLogy();
+  variance -> SetTitle(" ; p_{T} ; Yield ");
+  variance -> SetMarkerStyle(4);
+  variance -> Draw("ap");
+  TF1* pow_fit  = new TF1( "Fit" , "[0]*pow(x,-[1])");
+  variance-> Fit(pow_fit, "q" , "+" , 0,55);
+  
+}
+
+ifstream& goToLine(ifstream& file, unsigned int num)
+{
+  file.seekg(0);
+  for(int i = 0; i < num; i++)
+    {
+      file.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+    }
+  return file;
+}
+
+
+int countLines(char *filelist) { 
+    int number_of_lines = 0;
+    std::string line;
+    std::ifstream myfile(filelist);
+
+    while (std::getline(myfile, line))++number_of_lines;
+    myfile.seekg (0, ios::beg);
+    return number_of_lines;
+
+}
